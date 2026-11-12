@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mom & Baby Shop Manager - POS & Inventory</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--primary:#2563eb;--primary-light:#eff6ff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--bg:#f8fafc;--green:#16a34a;--red:#dc2626;--blue:#0284c7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',Arial,sans-serif}
+header{background:linear-gradient(120deg,#1e3a8a,#2563eb);color:white;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0 0 3px}header p{margin:0;opacity:.9;font-size:12px}
+.wrap{display:flex;min-height:calc(100vh - 74px)}
+nav{width:225px;background:white;border-right:1px solid var(--line);padding:14px 8px;flex-shrink:0}
+nav button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:8px;color:#475569;cursor:pointer;font-size:13.5px;margin:2px 0;transition:.15s}
+nav button.active,nav button:hover{background:var(--primary-light);color:var(--primary);font-weight:bold}
+main{padding:20px;flex:1;min-width:0}.page{display:none}.page.active{display:block}
+h2{margin:0 0 14px;font-size:20px;color:#0f172a}.muted{color:var(--muted);font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+.card,.panel{background:white;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.card small{color:var(--muted);font-weight:600}.card strong{display:block;font-size:21px;margin-top:6px;color:#0f172a}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+input,select{border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;font:inherit;background:white;min-width:0}
+input:focus,select:focus{outline:2px solid #bfdbfe;border-color:var(--primary)}
+button.primary,.toolbar button{background:var(--primary);color:white;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13.5px;font-weight:600}
+button.primary:hover{background:#1d4ed8}
+button.secondary{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:8px 11px;cursor:pointer;font-size:13px}
+button.secondary:hover{background:#e2e8f0}
+button.danger{background:#fef2f2;color:var(--red);border:1px solid #fecaca;border-radius:7px;padding:6px 9px;cursor:pointer;font-size:12.5px}
+form{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+form button{align-self:end}.tablewrap{overflow:auto;background:white;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px;border-bottom:1px solid var(--line);text-align:left}th{background:#f1f5f9;color:#334155;font-weight:600}
+.empty{text-align:center;color:var(--muted);padding:20px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+
+/* Easy POS Layout */
+.pos-grid{display:grid;grid-template-columns:1fr 1.3fr 0.9fr;gap:14px;align-items:start}
+.pos-box{background:white;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03)}
+.pos-box h3{margin:0 0 10px;font-size:15px;color:#1e3a8a;border-bottom:1px solid var(--line);padding-bottom:8px}
+.prod-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px;cursor:pointer;transition:.15s}
+.prod-item:hover{background:var(--primary-light);border-color:var(--primary)}
+.badge-disc{background:#dcfce7;color:var(--green);padding:2px 6px;border-radius:5px;font-size:11px;font-weight:bold}
+.badge-add{background:#e0f2fe;color:var(--blue);padding:2px 6px;border-radius:5px;font-size:11px;font-weight:bold}
+.summary-box{background:#f8fafc;padding:12px;border-radius:10px;margin:12px 0;border:1px solid #cbd5e1}
+.summary-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13.5px}
+.summary-total{font-size:18px;font-weight:bold;color:var(--primary);border-top:1px dashed #94a3b8;padding-top:8px;margin-top:6px}
+
+/* Receipt */
+.receipt-box{background:#fff;border:1px dashed #64748b;padding:14px;border-radius:8px;font-family:'Courier New',Courier,monospace;font-size:12px}
+.receipt-header{text-align:center;border-bottom:1px dashed #94a3b8;padding-bottom:8px;margin-bottom:8px}
+.receipt-footer{text-align:center;border-top:1px dashed #94a3b8;padding-top:8px;margin-top:8px;font-size:11px}
+
+@media print {
+  body * {visibility: hidden;}
+  #printableReceipt, #printableReceipt * {visibility: visible;}
+  #printableReceipt {position: absolute; left: 0; top: 0; width: 100%;}
+}
+@media(max-width:1100px){.pos-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:850px){.cards{grid-template-columns:repeat(2,1fr)}.wrap{display:block}nav{width:100%;display:flex;overflow:auto;border-right:0;border-bottom:1px solid var(--line)}nav button{white-space:nowrap;width:auto}.grid2,.pos-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Mom & Baby Shop Manager</h1><p>POS Sales • Inventory • Customers • Accounts & Reports</p></div>
+  <div id="today"></div>
+</header>
+<div class="wrap">
+<nav>
+  <button class="active" data-page="pos">🧾 POS Sales Counter</button>
+  <button data-page="dashboard">🏠 Dashboard</button>
+  <button data-page="products">📦 Products & Stock</button>
+  <button data-page="customers">👩‍🍼 Customer Ledger</button>
+  <button data-page="suppliers">🚚 Supplier Ledger</button>
+  <button data-page="accounts">💰 Accounts & Cash</button>
+  <button data-page="reports">📊 Reports</button>
+</nav>
+<main>
+
+<!-- 1. EASY POS SALES COUNTER -->
+<section id="pos" class="page active">
+  <h2>POS Sales & Billing Counter</h2>
+  <div class="pos-grid">
+    
+    <!-- Column 1: Product Selection -->
+    <div class="pos-box">
+      <h3>1. Select Product (Barcode / Name)</h3>
+      <input id="posSearch" placeholder="🔍 Scan barcode or type product name..." style="width:100%;margin-bottom:10px" autofocus>
+      <div id="posProductList" style="max-height:430px;overflow-y:auto"></div>
+    </div>
+
+    <!-- Column 2: Cart & Billing -->
+    <div class="pos-box">
+      <h3>2. Cart & Billing Calculation</h3>
+      <div class="tablewrap" style="max-height:240px;margin-bottom:10px">
+        <table>
+          <thead><tr><th>Product</th><th>Unit Price</th><th>Qty</th><th>Total</th><th></th></tr></thead>
+          <tbody id="cartRows"></tbody>
+        </table>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-row"><span>Subtotal:</span><strong id="cartSubtotal">৳ 0</strong></div>
+        <div class="summary-row" style="align-items:center">
+          <span>Extra Discount (৳):</span>
+          <input id="extraDiscount" type="number" min="0" value="0" style="width:90px;padding:5px;text-align:right">
+        </div>
+        <div class="summary-row" style="align-items:center">
+          <span>VAT / Tax (%):</span>
+          <input id="vatPercent" type="number" min="0" value="0" style="width:90px;padding:5px;text-align:right">
+        </div>
+        <div class="summary-row summary-total">
+          <span>Grand Total:</span>
+          <span id="cartFinalTotal">৳ 0</span>
+        </div>
+      </div>
+
+      <form id="checkoutForm" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
+        <div>
+          <label class="muted">Mobile Number</label>
+          <input id="custPhone" placeholder="017XXXXXXXX" style="width:100%">
+        </div>
+        <div>
+          <label class="muted">Customer Name</label>
+          <input id="custName" placeholder="Name (Optional)" style="width:100%">
+        </div>
+        <div>
+          <label class="muted">Payment Method</label>
+          <select id="payMethod" style="width:100%">
+            <option value="Cash">Cash</option>
+            <option value="bKash">bKash</option>
+            <option value="Nagad">Nagad</option>
+            <option value="Card">Card</option>
+            <option value="Bank">Bank</option>
+          </select>
+        </div>
+        <div>
+          <label class="muted">Paid Amount (৳)</label>
+          <input id="payAmount" type="number" min="0" step=".01" required style="width:100%;font-weight:bold;color:var(--green)">
+        </div>
+        <button class="primary" style="grid-column:span 2;padding:12px;margin-top:4px">✅ Complete Sale & Generate Receipt</button>
+      </form>
+    </div>
+
+    <!-- Column 3: Receipt Preview -->
+    <div class="pos-box">
+      <h3>3. Customer Receipt</h3>
+      <div id="printableReceipt">
+        <div class="receipt-box">
+          <div class="receipt-header">
+            <strong style="font-size:14px">Mom & Baby Shop</strong><br>
+            <small>Niribili ,Pollibiddut, Dhaka <br> Phone: 01872774818</small>
+          </div>
+          <div id="receiptContent" style="line-height:1.5">
+            <p class="muted" style="text-align:center">Receipt will appear here after sale</p>
+          </div>
+          <div class="receipt-footer">
+            Thank you for shopping with us! Please come again.
+          </div>
+        </div>
+      </div>
+      <button class="secondary" onclick="window.print()" style="width:100%;margin-top:10px">🖨️ Print Receipt / Save PDF</button>
+    </div>
+
+  </div>
+
+  <div style="margin-top:20px">
+    <h3>Recent Sales & Returns</h3>
+    <div class="tablewrap"><table><thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Method</th><th>Total Bill</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody id="salesRows"></tbody></table></div>
+  </div>
+</section>
+
+<!-- 2. DASHBOARD -->
+<section id="dashboard" class="page">
+  <h2>Dashboard Overview</h2>
+  <div class="cards" id="stats"></div>
+  <div class="grid2">
+    <div class="panel"><h3>Daily Sales Chart</h3><canvas id="salesBarChart" height="130"></canvas></div>
+    <div class="panel"><h3>Income vs Expense</h3><canvas id="financePieChart" height="130"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Low Stock & Expiry Alerts</h3><div id="lowstock"></div></div>
+    <div class="panel"><h3>Best Selling Products</h3><div id="bestSelling"></div></div>
+  </div>
+</section>
+
+<!-- 3. PRODUCTS & STOCK -->
+<section id="products" class="page">
+  <h2>Products & Inventory Management</h2>
+  <div class="toolbar">
+    <input id="invSearch" placeholder="🔍 Search by name, SKU, or category..." style="flex:1;max-width:320px">
+  </div>
+  <form id="productForm">
+    <input id="pName" placeholder="Product Name *" required>
+    <input id="pCode" placeholder="Barcode / SKU *" required>
+    <select id="pCategory"><option value="Baby Food">Baby Food</option><option value="Lotion & Cream">Lotion & Cream</option><option value="Diaper">Diaper</option><option value="Toy & Dress">Toy & Dress</option></select>
+    <input id="pBrand" placeholder="Brand / Size / Color">
+    <input id="pBuy" type="number" min="0" step=".01" placeholder="Purchase Price *" required>
+    <input id="pSell" type="number" min="0" step=".01" placeholder="Selling Price *" required>
+    <input id="pStock" type="number" min="0" placeholder="Stock Quantity *" required>
+    <input id="pAlert" type="number" min="0" value="5" placeholder="Low Stock Alert">
+    <input id="pExp" type="date" title="Expiry Date">
+    <button class="primary">Add Product</button>
+  </form>
+  <div class="tablewrap"><table><thead><tr><th>Product</th><th>Code (SKU)</th><th>Category / Brand</th><th>Buy Price</th><th>Sell Price</th><th>Stock</th><th>Expiry Date</th><th>Action</th></tr></thead><tbody id="productRows"></tbody></table></div>
+</section>
+
+<!-- 4. CUSTOMER LEDGER -->
+<section id="customers" class="page">
+  <h2>Customer Due & Loyalty Points</h2>
+  <form id="customerForm">
+    <input id="cName" placeholder="Customer Name *" required>
+    <input id="cPhone" placeholder="Mobile Number *" required>
+    <input id="cDue" type="number" min="0" step=".01" placeholder="Opening Due (Optional)">
+    <button class="primary">Save Customer</button>
+  </form>
+  <div class="tablewrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Loyalty Points</th><th>Current Due</th><th>Action</th></tr></thead><tbody id="customerRows"></tbody></table></div>
+</section>
+
+<!-- 5. SUPPLIER LEDGER -->
+<section id="suppliers" class="page">
+  <h2>Supplier Payable Ledger</h2>
+  <form id="supplierForm">
+    <input id="sName" placeholder="Supplier Name *" required>
+    <input id="sPhone" placeholder="Mobile Number *" required>
+    <input id="sDue" type="number" min="0" step=".01" placeholder="Payable / Due Amount">
+    <button class="primary">Save Supplier</button>
+  </form>
+  <div class="tablewrap"><table><thead><tr><th>Supplier</th><th>Mobile</th><th>Current Payable</th><th>Action</th></tr></thead><tbody id="supplierRows"></tbody></table></div>
+</section>
+
+<!-- 6. ACCOUNTS & CASH -->
+<section id="accounts" class="page">
+  <h2>Income, Expense & Account Balances</h2>
+  <div class="cards">
+    <div class="card"><small>Cash in Hand</small><strong id="balCash">৳ 0</strong></div>
+    <div class="card"><small>bKash Balance</small><strong id="balBkash">৳ 0</strong></div>
+    <div class="card"><small>Nagad Balance</small><strong id="balNagad">৳ 0</strong></div>
+    <div class="card"><small>Bank Balance</small><strong id="balBank">৳ 0</strong></div>
+  </div>
+  <form id="moneyForm">
+    <select id="moneyType"><option value="expense">Expense</option><option value="income">Other Income</option></select>
+    <input id="moneyTitle" placeholder="Description (e.g., Shop Rent) *" required>
+    <input id="moneyAmount" type="number" min=".01" step=".01" placeholder="Amount *" required>
+    <select id="moneyAccount"><option value="Cash">Cash</option><option value="bKash">bKash</option><option value="Nagad">Nagad</option><option value="Bank">Bank</option></select>
+    <input id="moneyDate" type="date" required>
+    <button class="primary">Save Transaction</button>
+  </form>
+  <div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Account</th><th>Amount</th></tr></thead><tbody id="moneyRows"></tbody></table></div>
+</section>
+
+<!-- 7. REPORTS -->
+<section id="reports" class="page">
+  <h2>Bank Statement Style Report</h2>
+  <div class="toolbar">
+    <label>From <input type="date" id="repStart"></label>
+    <label>To <input type="date" id="repEnd"></label>
+    <button id="genRepBtn">Generate Report</button>
+    <button class="secondary" id="csvBtn">📥 Export CSV</button>
+  </div>
+  <div id="reportCards" class="cards"></div>
+  <div class="tablewrap" style="margin-top:15px">
+    <table><thead><tr><th>Date</th><th>Description</th><th>Inflow (Credit)</th><th>Outflow (Debit)</th><th>Balance</th></tr></thead><tbody id="statementRows"></tbody></table>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+const $=id=>document.getElementById(id), money=n=>'৳ '+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2}), today=()=>new Date().toISOString().slice(0,10);
+
+// Sample initial data if empty
+let defaultDB = {
+  products: [
+    {id:'p1', name:'Pampers Diaper (M - 32pcs)', code:'1001', category:'Diaper', brand:'Pampers', buy:850, sell:980, stock:20, alert:5, exp:'2027-12-31'},
+    {id:'p2', name:'Johnson Baby Lotion 200ml', code:'1002', category:'Lotion & Cream', brand:'Johnsons', buy:320, sell:380, stock:15, alert:5, exp:'2027-06-15'},
+    {id:'p3', name:'Cerelac Wheat & Milk 400g', code:'1003', category:'Baby Food', brand:'Nestle', buy:410, sell:460, stock:12, alert:4, exp:'2027-03-20'}
+  ],
+  sales:[], money:[], customers:[], suppliers:[],
+  accounts:{Cash:0, bKash:0, Nagad:0, Bank:0}
+};
+
+let db=JSON.parse(localStorage.getItem('momBabyEasyPOS_EN')||JSON.stringify(defaultDB));
+let cart=[];
+let barChartInstance=null, pieChartInstance=null;
+
+function save(){localStorage.setItem('momBabyEasyPOS_EN',JSON.stringify(db));render()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function rowEmpty(cols){return `<tr><td class="empty" colspan="${cols}">No records found</td></tr>`}
+
+function render(){
+  $('today').textContent=new Date().toLocaleDateString('en-US',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  
+  renderPOSProducts();
+  renderCart();
+  renderSales();
+  renderProducts();
+  renderCustomers();
+  renderSuppliers();
+  renderMoney();
+  renderDashboard();
+}
+
+// 1. POS Product Search & Add
+function renderPOSProducts(){
+  let q=$('posSearch').value.trim().toLowerCase();
+  let filtered=db.products.filter(p=>p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q));
+  $('posProductList').innerHTML=filtered.map(p=>`
+    <div class="prod-item" onclick="addToCart('${p.id}')">
+      <div>
+        <strong>${esc(p.name)}</strong><br>
+        <small class="muted">SKU: ${esc(p.code)} | Stock: <b style="color:${p.stock<=p.alert?'var(--red)':'var(--green)'}">${p.stock}</b></small>
+      </div>
+      <div style="text-align:right">
+        <strong style="color:var(--primary)">${money(p.sell)}</strong><br>
+        <span style="font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 7px;border-radius:4px">➕ Add</span>
+      </div>
+    </div>
+  `).join('')||'<p class="muted" style="text-align:center;padding:20px">No products found</p>';
+}
+
+// Barcode Scanner Enter key support
+$('posSearch').onkeydown=e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    let q=$('posSearch').value.trim().toLowerCase();
+    let exact=db.products.find(p=>p.code.toLowerCase()===q);
+    if(exact){
+      addToCart(exact.id);
+      $('posSearch').value='';
+      renderPOSProducts();
+    }
+  }
+};
+$('posSearch').oninput=renderPOSProducts;
+
+function addToCart(id){
+  let p=db.products.find(x=>x.id===id);
+  if(!p || p.stock<=0) return alert('Sorry, this product is out of stock!');
+  let existing=cart.find(x=>x.id===id);
+  if(existing){
+    if(existing.qty >= p.stock) return alert('Not enough stock available!');
+    existing.qty++;
+  } else {
+    cart.push({id:p.id, name:p.name, defaultSell:p.sell, unitPrice:p.sell, buy:p.buy, qty:1, stock:p.stock});
+  }
+  renderCart();
+}
+
+// Render Cart with Auto Discount / Add indicator
+function renderCart(){
+  $('cartRows').innerHTML=cart.map((item,i)=>{
+    let diff = item.defaultSell - item.unitPrice;
+    let badge = '';
+    if(diff > 0) badge = `<br><span class="badge-disc">Discount: ৳${diff}</span>`;
+    else if(diff < 0) badge = `<br><span class="badge-add">+ Add: ৳${Math.abs(diff)}</span>`;
+
+    return `<tr>
+      <td><b>${esc(item.name)}</b>${badge}</td>
+      <td><input type="number" min="0" step=".01" value="${item.unitPrice}" style="width:75px;padding:4px" onchange="changeCartPrice(${i}, this.value)"></td>
+      <td><input type="number" min="1" max="${item.stock}" value="${item.qty}" style="width:55px;padding:4px" onchange="changeCartQty(${i}, this.value)"></td>
+      <td><b>${money(item.unitPrice * item.qty)}</b></td>
+      <td><button class="danger" onclick="removeCart(${i})">✕</button></td>
+    </tr>`;
+  }).join('')||rowEmpty(5);
+
+  calculateBill();
+}
+
+function changeCartPrice(i, val){
+  cart[i].unitPrice = Math.max(0, Number(val)||0);
+  renderCart();
+}
+function changeCartQty(i, val){
+  let q = Math.max(1, Math.min(cart[i].stock, Number(val)||1));
+  cart[i].qty = q;
+  renderCart();
+}
+function removeCart(i){
+  cart.splice(i,1);
+  renderCart();
+}
+
+function calculateBill(){
+  let subtotal = cart.reduce((sum, item)=> sum + (item.unitPrice * item.qty), 0);
+  let extraDisc = Number($('extraDiscount').value)||0;
+  let vatPct = Number($('vatPercent').value)||0;
+  
+  let afterDisc = Math.max(0, subtotal - extraDisc);
+  let finalTotal = afterDisc + (afterDisc * (vatPct / 100));
+
+  $('cartSubtotal').textContent = money(subtotal);
+  $('cartFinalTotal').textContent = money(finalTotal);
+  $('payAmount').value = finalTotal.toFixed(0);
+}
+$('extraDiscount').oninput=calculateBill;
+$('vatPercent').oninput=calculateBill;
+
+// Auto-fill customer name when phone matches
+$('custPhone').oninput=()=>{
+  let ph=$('custPhone').value.trim();
+  let c=db.customers.find(x=>x.phone===ph);
+  if(c) $('custName').value=c.name;
+};
+
+// Complete Sale
+$('checkoutForm').onsubmit=e=>{
+  e.preventDefault();
+  if(cart.length===0) return alert('Please add products to the cart first!');
+
+  let subtotal = cart.reduce((sum, item)=> sum + (item.unitPrice * item.qty), 0);
+  let extraDisc = Number($('extraDiscount').value)||0;
+  let vatPct = Number($('vatPercent').value)||0;
+  let afterDisc = Math.max(0, subtotal - extraDisc);
+  let finalTotal = Math.round(afterDisc + (afterDisc * (vatPct / 100)));
+
+  let paid = Number($('payAmount').value)||0;
+  let due = Math.max(0, finalTotal - paid);
+  let phone = $('custPhone').value.trim();
+  let name = $('custName').value.trim() || 'Walk-in Customer';
+  let method = $('payMethod').value;
+
+  if(due > 0 && !phone) return alert('Customer mobile number is required to record a due balance!');
+
+  let inv = 'INV-' + Date.now().toString().slice(-5);
+  
+  // Deduct stock
+  cart.forEach(item=>{
+    let p = db.products.find(x=>x.id===item.id);
+    if(p) p.stock -= item.qty;
+  });
+
+  // Save Sale Record
+  db.sales.push({
+    invoice: inv, date: today(), items: [...cart], subtotal, discount: extraDisc, vat: vatPct,
+    total: finalTotal, paid, due, customer: name, phone, method
+  });
+
+  // Update Account Balance
+  db.accounts[method] = (db.accounts[method]||0) + paid;
+
+  // Update Customer Due & Points
+  if(phone){
+    let c = db.customers.find(x=>x.phone===phone);
+    if(c){
+      c.name = name;
+      c.due += due;
+      c.points += Math.floor(finalTotal / 100);
+    } else {
+      db.customers.push({name, phone, points: Math.floor(finalTotal / 100), due});
+    }
+  }
+
+  // Generate Clean Receipt
+  $('receiptContent').innerHTML=`
+    <div><b>Invoice:</b> ${inv} &nbsp;|&nbsp; <b>Date:</b> ${today()}</div>
+    <div><b>Customer:</b> ${esc(name)} ${phone ? '('+esc(phone)+')' : ''}</div>
+    <div style="border-top:1px dashed #94a3b8;margin:6px 0"></div>
+    ${cart.map(x=>`
+      <div style="display:flex;justify-content:space-between">
+        <span>${esc(x.name)} (${x.qty} × ${x.unitPrice})</span>
+        <span>${money(x.qty * x.unitPrice)}</span>
+      </div>
+    `).join('')}
+    <div style="border-top:1px dashed #94a3b8;margin:6px 0"></div>
+    ${extraDisc>0 ? `<div style="display:flex;justify-content:space-between"><span>Discount:</span><span>- ${money(extraDisc)}</span></div>` : ''}
+    ${vatPct>0 ? `<div style="display:flex;justify-content:space-between"><span>VAT (${vatPct}%):</span><span>+ ${money(afterDisc*(vatPct/100))}</span></div>` : ''}
+    <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:13px">
+      <span>Grand Total:</span><span>${money(finalTotal)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between">
+      <span>Paid (${method}):</span><span>${money(paid)}</span>
+    </div>
+    ${due>0 ? `<div style="display:flex;justify-content:space-between;color:#dc2626;font-weight:bold"><span>Due Balance:</span><span>${money(due)}</span></div>` : ''}
+  `;
+
+  cart = [];
+  $('extraDiscount').value = 0;
+  $('vatPercent').value = 0;
+  $('custPhone').value = '';
+  $('custName').value = '';
+  save();
+};
+
+function renderSales(){
+  $('salesRows').innerHTML=db.sales.slice(-15).reverse().map(s=>`
+    <tr>
+      <td><b>${s.invoice}</b></td>
+      <td>${s.date}</td>
+      <td>${esc(s.customer)}</td>
+      <td>${s.method}</td>
+      <td><b>${money(s.total)}</b></td>
+      <td style="color:var(--green)">${money(s.paid)}</td>
+      <td style="color:${s.due>0?'var(--red)':'inherit'}">${money(s.due)}</td>
+      <td><button class="danger" onclick="returnSale('${s.invoice}')">Return</button></td>
+    </tr>
+  `).join('')||rowEmpty(8);
+}
+
+function returnSale(inv){
+  if(!confirm('Returning this invoice will restore stock quantities. Continue?')) return;
+  let sale = db.sales.find(s=>s.invoice===inv);
+  if(sale){
+    sale.items.forEach(item=>{
+      let p = db.products.find(x=>x.id===item.id);
+      if(p) p.stock += item.qty;
+    });
+    db.accounts[sale.method] = Math.max(0, (db.accounts[sale.method]||0) - sale.paid);
+    db.sales = db.sales.filter(s=>s.invoice!==inv);
+    save();
+  }
+}
+
+// Products Management
+$('productForm').onsubmit=e=>{
+  e.preventDefault();
+  db.products.push({
+    id:crypto.randomUUID(), name:$('pName').value, code:$('pCode').value,
+    category:$('pCategory').value, brand:$('pBrand').value,
+    buy:+$('pBuy').value, sell:+$('pSell').value, stock:+$('pStock').value,
+    alert:+$('pAlert').value||5, exp:$('pExp').value
+  });
+  e.target.reset();
+  save();
+};
+
+function renderProducts(){
+  let q=$('invSearch').value.toLowerCase();
+  let filtered=db.products.filter(p=>p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)||p.category.toLowerCase().includes(q));
+  $('productRows').innerHTML=filtered.map(p=>`
+    <tr>
+      <td><b>${esc(p.name)}</b></td>
+      <td>${esc(p.code)}</td>
+      <td>${esc(p.category)} <small class="muted">${esc(p.brand)}</small></td>
+      <td>${money(p.buy)}</td>
+      <td><b>${money(p.sell)}</b></td>
+      <td><b style="color:${p.stock<=p.alert?'var(--red)':'var(--green)'}">${p.stock}</b></td>
+      <td>${p.exp||'-'}</td>
+      <td>
+        <button class="secondary" onclick="addStock('${p.id}')">+ Stock</button>
+        <button class="danger" onclick="delProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('')||rowEmpty(8);
+}
+$('invSearch').oninput=renderProducts;
+
+function addStock(id){
+  let n=+prompt('Enter quantity to add to stock:');
+  if(n>0){
+    let p=db.products.find(x=>x.id===id);
+    if(p) p.stock+=n;
+    save();
+  }
+}
+function delProduct(id){if(confirm('Delete this product?')){db.products=db.products.filter(x=>x.id!==id);save();}}
+
+// Customers
+$('customerForm').onsubmit=e=>{
+  e.preventDefault();
+  db.customers.push({name:$('cName').value, phone:$('cPhone').value, points:0, due:+$('cDue').value||0});
+  e.target.reset();
+  save();
+};
+function renderCustomers(){
+  $('customerRows').innerHTML=db.customers.map((c,i)=>`
+    <tr>
+      <td><b>${esc(c.name)}</b></td>
+      <td>${esc(c.phone)}</td>
+      <td>⭐ ${c.points}</td>
+      <td style="color:${c.due>0?'var(--red)':'var(--green)'}"><b>${money(c.due)}</b></td>
+      <td><button class="secondary" onclick="collectDue(${i})">Collect Due</button></td>
+    </tr>
+  `).join('')||rowEmpty(5);
+}
+function collectDue(i){
+  let amt=+prompt('Enter collected due amount:');
+  if(amt>0){
+    db.customers[i].due=Math.max(0, db.customers[i].due-amt);
+    db.accounts.Cash+=amt;
+    save();
+  }
+}
+
+// Suppliers
+$('supplierForm').onsubmit=e=>{
+  e.preventDefault();
+  db.suppliers.push({name:$('sName').value, phone:$('sPhone').value, due:+$('sDue').value||0});
+  e.target.reset();
+  save();
+};
+function renderSuppliers(){
+  $('supplierRows').innerHTML=db.suppliers.map((s,i)=>`
+    <tr>
+      <td><b>${esc(s.name)}</b></td>
+      <td>${esc(s.phone)}</td>
+      <td style="color:var(--red)"><b>${money(s.due)}</b></td>
+      <td><button class="secondary" onclick="paySupplier(${i})">Pay Supplier</button></td>
+    </tr>
+  `).join('')||rowEmpty(4);
+}
+function paySupplier(i){
+  let amt=+prompt('Enter payment amount to supplier:');
+  if(amt>0){
+    db.suppliers[i].due=Math.max(0, db.suppliers[i].due-amt);
+    db.accounts.Cash=Math.max(0, db.accounts.Cash-amt);
+    save();
+  }
+}
+
+// Accounts & Money
+$('moneyForm').onsubmit=e=>{
+  e.preventDefault();
+  let type=$('moneyType').value, title=$('moneyTitle').value, amount=+$('moneyAmount').value, acc=$('moneyAccount').value, date=$('moneyDate').value;
+  db.money.push({type, title, amount, account:acc, date});
+  if(type==='expense') db.accounts[acc]=(db.accounts[acc]||0)-amount;
+  else db.accounts[acc]=(db.accounts[acc]||0)+amount;
+  e.target.reset();
+  $('moneyDate').value=today();
+  save();
+};
+function renderMoney(){
+  $('balCash').textContent=money(db.accounts.Cash);
+  $('balBkash').textContent=money(db.accounts.bKash);
+  $('balNagad').textContent=money(db.accounts.Nagad);
+  $('balBank').textContent=money(db.accounts.Bank);
+  $('moneyRows').innerHTML=db.money.slice().reverse().map(m=>`<tr><td>${m.date}</td><td>${m.type==='expense'?'Expense':'Income'}</td><td>${esc(m.title)}</td><td>${m.account}</td><td>${money(m.amount)}</td></tr>`).join('')||rowEmpty(5);
+}
+
+// Dashboard & Reports
+function renderDashboard(){
+  let totalSales=db.sales.reduce((a,x)=>a+x.total,0);
+  let totalDue=db.customers.reduce((a,x)=>a+x.due,0);
+  let totalExp=db.money.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0);
+  let profit=db.sales.reduce((a,s)=>a+s.items.reduce((sum,it)=>sum+(it.unitPrice-it.buy)*it.qty,0),0);
+
+  $('stats').innerHTML=[
+    ['Total Sales', money(totalSales)],
+    ['Net Profit', money(profit - totalExp)],
+    ['Customer Due', money(totalDue)],
+    ['Total Expense', money(totalExp)]
+  ].map(x=>`<div class="card"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join('');
+
+  $('lowstock').innerHTML=db.products.filter(p=>p.stock<=p.alert).map(p=>`<p>⚠️ <b>${esc(p.name)}</b> — Stock: ${p.stock} pcs</p>`).join('')||'<p class="muted">All products have sufficient stock</p>';
+
+  let best={};
+  db.sales.forEach(s=>s.items.forEach(it=>best[it.name]=(best[it.name]||0)+it.qty));
+  $('bestSelling').innerHTML=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>`<p>🔥 ${esc(x[0])} — <b>${x[1]}</b> pcs</p>`).join('')||'<p class="muted">No sales data yet</p>';
+
+  // Charts
+  let ctxBar=$('salesBarChart').getContext('2d');
+  let dates=[...new Set(db.sales.map(s=>s.date))].slice(-5);
+  if(!dates.length) dates=[today()];
+  let amounts=dates.map(d=>db.sales.filter(s=>s.date===d).reduce((a,b)=>a+b.total,0));
+  if(barChartInstance) barChartInstance.destroy();
+  barChartInstance=new Chart(ctxBar,{type:'bar',data:{labels:dates,datasets:[{label:'Sales (৳)',data:amounts,backgroundColor:'#2563eb',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}}}});
+
+  let ctxPie=$('financePieChart').getContext('2d');
+  if(pieChartInstance) pieChartInstance.destroy();
+  pieChartInstance=new Chart(ctxPie,{type:'pie',data:{labels:['Total Sales','Total Expense'],datasets:[{data:[totalSales||1,totalExp||0],backgroundColor:['#16a34a','#dc2626']}]},options:{responsive:true}});
+}
+
+$('genRepBtn').onclick=()=>{
+  let s=$('repStart').value, e=$('repEnd').value;
+  let ss=db.sales.filter(x=>x.date>=s && x.date<=e);
+  let mm=db.money.filter(x=>x.date>=s && x.date<=e);
+  let txs=[];
+  ss.forEach(x=>txs.push({date:x.date, desc:`Sale (${x.invoice})`, in:x.paid, out:0}));
+  mm.forEach(x=>txs.push({date:x.date, desc:x.title, in:x.type==='income'?x.amount:0, out:x.type==='expense'?x.amount:0}));
+  txs.sort((a,b)=>a.date.localeCompare(b.date));
+  let bal=0;
+  $('statementRows').innerHTML=txs.map(t=>{
+    bal+=(t.in-t.out);
+    return `<tr><td>${t.date}</td><td>${esc(t.desc)}</td><td style="color:var(--green)">${t.in?money(t.in):'-'}</td><td style="color:var(--red)">${t.out?money(t.out):'-'}</td><td><b>${money(bal)}</b></td></tr>`;
+  }).join('')||rowEmpty(5);
+};
+
+$('csvBtn').onclick=()=>{
+  let rows=[['Invoice','Date','Customer','Total','Paid','Due'],...db.sales.map(s=>[s.invoice,s.date,s.customer,s.total,s.paid,s.due])];
+  let csv=rows.map(r=>r.join(',')).join('\n');
+  let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='shop-report.csv';a.click();
+};
+
+// Navigation
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  $(b.dataset.page).classList.add('active');
+});
+
+$('moneyDate').value=today();
+$('repStart').value=today();
+$('repEnd').value=today();
+render();
+</script>
+</body>
+</html>
