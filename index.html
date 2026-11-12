@@ -13,8 +13,7 @@ header h1{font-size:20px;margin:0 0 3px}header p{margin:0;opacity:.9;font-size:1
 nav{width:225px;background:white;border-right:1px solid var(--line);padding:14px 8px;flex-shrink:0}
 nav button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:8px;color:#475569;cursor:pointer;font-size:13.5px;margin:2px 0;transition:.15s}
 nav button.active,nav button:hover{background:var(--primary-light);color:var(--primary);font-weight:bold}
-main{padding:20px;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
-.page{display:none}.page.active{display:block}
+main{padding:20px;flex:1;min-width:0}.page{display:none}.page.active{display:block}
 h2{margin:0 0 14px;font-size:20px;color:#0f172a}.muted{color:var(--muted);font-size:12px}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:12px;margin-bottom:18px}
 .card,.panel{background:white;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
@@ -50,9 +49,6 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px
 .receipt-header{text-align:center;border-bottom:1px dashed #94a3b8;padding-bottom:8px;margin-bottom:8px}
 .receipt-footer{text-align:center;border-top:1px dashed #94a3b8;padding-top:8px;margin-top:8px;font-size:11px}
 
-/* Page Footer */
-.page-footer{text-align:center;padding:16px 10px 4px;margin-top:28px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:500}
-
 @media print {
   body * {visibility: hidden;}
   #printableReceipt, #printableReceipt * {visibility: visible;}
@@ -64,7 +60,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px
 </head>
 <body>
 <header>
-  <div><h1>Mom & Baby Shop Manager</h1><p>POS Sales • Inventory • Customers • Accounts & Reports</p></div>
+  <div><h1>Mom & Baby Shop Manager</h1><p>POS Sales • Inventory • Customers • Accounts & Reports</p><p>Prepared & Developed by Infinity Global Corporation</p></div>
   <div id="today"></div>
 </header>
 <div class="wrap">
@@ -78,7 +74,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px
   <button data-page="reports">📊 Reports</button>
 </nav>
 <main>
-<div>
+
 <!-- 1. EASY POS SALES COUNTER -->
 <section id="pos" class="page active">
   <h2>POS Sales & Billing Counter</h2>
@@ -151,7 +147,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px
         <div class="receipt-box">
           <div class="receipt-header">
             <strong style="font-size:14px">Mom & Baby Shop</strong><br>
-            <small>Mirpur, Dhaka | Phone: 01700000000</small>
+            <small>Niribili ,Pollibiddut, Dhaka <br> Phone: 01872774818</small>
           </div>
           <div id="receiptContent" style="line-height:1.5">
             <p class="muted" style="text-align:center">Receipt will appear here after sale</p>
@@ -265,17 +261,14 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px
     <table><thead><tr><th>Date</th><th>Description</th><th>Inflow (Credit)</th><th>Outflow (Debit)</th><th>Balance</th></tr></thead><tbody id="statementRows"></tbody></table>
   </div>
 </section>
-</div>
 
-<footer class="page-footer">
-  Prepared &amp; Developed by Infinity Global Corporation
-</footer>
 </main>
 </div>
 
 <script>
 const $=id=>document.getElementById(id), money=n=>'৳ '+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2}), today=()=>new Date().toISOString().slice(0,10);
 
+// Sample initial data if empty
 let defaultDB = {
   products: [
     {id:'p1', name:'Pampers Diaper (M - 32pcs)', code:'1001', category:'Diaper', brand:'Pampers', buy:850, sell:980, stock:20, alert:5, exp:'2027-12-31'},
@@ -325,6 +318,7 @@ function renderPOSProducts(){
   `).join('')||'<p class="muted" style="text-align:center;padding:20px">No products found</p>';
 }
 
+// Barcode Scanner Enter key support
 $('posSearch').onkeydown=e=>{
   if(e.key==='Enter'){
     e.preventDefault();
@@ -352,6 +346,7 @@ function addToCart(id){
   renderCart();
 }
 
+// Render Cart with Auto Discount / Add indicator
 function renderCart(){
   $('cartRows').innerHTML=cart.map((item,i)=>{
     let diff = item.defaultSell - item.unitPrice;
@@ -400,12 +395,14 @@ function calculateBill(){
 $('extraDiscount').oninput=calculateBill;
 $('vatPercent').oninput=calculateBill;
 
+// Auto-fill customer name when phone matches
 $('custPhone').oninput=()=>{
   let ph=$('custPhone').value.trim();
   let c=db.customers.find(x=>x.phone===ph);
   if(c) $('custName').value=c.name;
 };
 
+// Complete Sale
 $('checkoutForm').onsubmit=e=>{
   e.preventDefault();
   if(cart.length===0) return alert('Please add products to the cart first!');
@@ -426,18 +423,22 @@ $('checkoutForm').onsubmit=e=>{
 
   let inv = 'INV-' + Date.now().toString().slice(-5);
   
+  // Deduct stock
   cart.forEach(item=>{
     let p = db.products.find(x=>x.id===item.id);
     if(p) p.stock -= item.qty;
   });
 
+  // Save Sale Record
   db.sales.push({
     invoice: inv, date: today(), items: [...cart], subtotal, discount: extraDisc, vat: vatPct,
     total: finalTotal, paid, due, customer: name, phone, method
   });
 
+  // Update Account Balance
   db.accounts[method] = (db.accounts[method]||0) + paid;
 
+  // Update Customer Due & Points
   if(phone){
     let c = db.customers.find(x=>x.phone===phone);
     if(c){
@@ -449,6 +450,7 @@ $('checkoutForm').onsubmit=e=>{
     }
   }
 
+  // Generate Clean Receipt
   $('receiptContent').innerHTML=`
     <div><b>Invoice:</b> ${inv} &nbsp;|&nbsp; <b>Date:</b> ${today()}</div>
     <div><b>Customer:</b> ${esc(name)} ${phone ? '('+esc(phone)+')' : ''}</div>
@@ -508,6 +510,7 @@ function returnSale(inv){
   }
 }
 
+// Products Management
 $('productForm').onsubmit=e=>{
   e.preventDefault();
   db.products.push({
@@ -551,6 +554,7 @@ function addStock(id){
 }
 function delProduct(id){if(confirm('Delete this product?')){db.products=db.products.filter(x=>x.id!==id);save();}}
 
+// Customers
 $('customerForm').onsubmit=e=>{
   e.preventDefault();
   db.customers.push({name:$('cName').value, phone:$('cPhone').value, points:0, due:+$('cDue').value||0});
@@ -577,6 +581,7 @@ function collectDue(i){
   }
 }
 
+// Suppliers
 $('supplierForm').onsubmit=e=>{
   e.preventDefault();
   db.suppliers.push({name:$('sName').value, phone:$('sPhone').value, due:+$('sDue').value||0});
@@ -602,6 +607,7 @@ function paySupplier(i){
   }
 }
 
+// Accounts & Money
 $('moneyForm').onsubmit=e=>{
   e.preventDefault();
   let type=$('moneyType').value, title=$('moneyTitle').value, amount=+$('moneyAmount').value, acc=$('moneyAccount').value, date=$('moneyDate').value;
@@ -620,6 +626,7 @@ function renderMoney(){
   $('moneyRows').innerHTML=db.money.slice().reverse().map(m=>`<tr><td>${m.date}</td><td>${m.type==='expense'?'Expense':'Income'}</td><td>${esc(m.title)}</td><td>${m.account}</td><td>${money(m.amount)}</td></tr>`).join('')||rowEmpty(5);
 }
 
+// Dashboard & Reports
 function renderDashboard(){
   let totalSales=db.sales.reduce((a,x)=>a+x.total,0);
   let totalDue=db.customers.reduce((a,x)=>a+x.due,0);
@@ -639,6 +646,7 @@ function renderDashboard(){
   db.sales.forEach(s=>s.items.forEach(it=>best[it.name]=(best[it.name]||0)+it.qty));
   $('bestSelling').innerHTML=Object.entries(best).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>`<p>🔥 ${esc(x[0])} — <b>${x[1]}</b> pcs</p>`).join('')||'<p class="muted">No sales data yet</p>';
 
+  // Charts
   let ctxBar=$('salesBarChart').getContext('2d');
   let dates=[...new Set(db.sales.map(s=>s.date))].slice(-5);
   if(!dates.length) dates=[today()];
@@ -672,6 +680,7 @@ $('csvBtn').onclick=()=>{
   let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='shop-report.csv';a.click();
 };
 
+// Navigation
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
